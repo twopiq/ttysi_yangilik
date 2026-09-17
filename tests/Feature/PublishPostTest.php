@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Contracts\SitePublisher;
 use App\Enums\PostStatus;
 use App\Enums\PostType;
 use App\Jobs\PublishPost;
 use App\Models\Post;
-use App\Services\Site\SitePublisher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;

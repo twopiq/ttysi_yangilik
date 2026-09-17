@@ -2,13 +2,14 @@
 
 namespace App\Services\Site;
 
+use App\Contracts\SitePublisher;
 use App\Models\Post;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
 /**
- * Tasdiqlangan postni institut saytining API'siga yuboradi.
+ * Postni saytning HTTP API'siga multipart so'rov bilan yuboradi.
  *
  * So'rov multipart/form-data ko'rinishida ketadi:
  *   external_id  — takroriy joylashuvni oldini olish uchun barqaror kalit
@@ -22,8 +23,13 @@ use RuntimeException;
  *
  * Sayt javobida { "id": ..., "url": ... } kutiladi.
  */
-class SitePublisher
+class ApiSitePublisher implements SitePublisher
 {
+    public function name(): string
+    {
+        return 'api';
+    }
+
     /** @return array{id: ?string, url: ?string} */
     public function publish(Post $post): array
     {

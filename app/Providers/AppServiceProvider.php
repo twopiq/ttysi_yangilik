@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Contracts\SitePublisher;
 use App\Contracts\TranslationDriver;
+use App\Services\Site\ApiSitePublisher;
 use App\Services\Translation\ClaudeTranslator;
 use App\Services\Translation\GeminiTranslator;
 use App\Services\Translation\ManualTranslator;
@@ -25,10 +27,33 @@ class AppServiceProvider extends ServiceProvider
     ];
 
     /**
+     * Postni saytga yetkazish usullari.
+     *
+     * @var array<string, class-string<SitePublisher>>
+     */
+    private const SITE_PUBLISHERS = [
+        'api' => ApiSitePublisher::class,
+    ];
+
+    /**
      * Register any application services.
      */
     public function register(): void
     {
+        $this->app->bind(SitePublisher::class, function (): SitePublisher {
+            $driver = (string) config('site.driver');
+
+            if (! isset(self::SITE_PUBLISHERS[$driver])) {
+                $known = implode(', ', array_keys(self::SITE_PUBLISHERS));
+
+                throw new InvalidArgumentException(
+                    "Noma'lum nashr usuli: '{$driver}'. Mavjudlari: {$known}.",
+                );
+            }
+
+            return $this->app->make(self::SITE_PUBLISHERS[$driver]);
+        });
+
         $this->app->bind(TranslationDriver::class, function (): TranslationDriver {
             $driver = (string) config('translation.driver');
 

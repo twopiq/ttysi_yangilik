@@ -2,9 +2,9 @@
 
 namespace App\Jobs;
 
+use App\Contracts\SitePublisher;
 use App\Enums\PostStatus;
 use App\Models\Post;
-use App\Services\Site\SitePublisher;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;

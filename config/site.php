@@ -2,6 +2,13 @@
 
 return [
     /*
+    | Postni saytga yetkazish usuli.
+    |
+    | api — saytning HTTP endpointiga multipart so'rov (standart).
+    */
+    'driver' => env('SITE_DRIVER', 'api'),
+
+    /*
     | Laravel saytning yangilik qabul qiladigan API manzili.
     | Masalan: https://institut.uz/api/news
     */
