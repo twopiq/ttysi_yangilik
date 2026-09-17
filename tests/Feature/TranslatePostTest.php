@@ -6,9 +6,9 @@ use App\Enums\PostStatus;
 use App\Enums\PostType;
 use App\Jobs\TranslatePost;
 use App\Models\Post;
-use App\Services\Translation\Translator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
+use Tests\Support\FakeTranslationDriver;
 use Tests\TestCase;
 
 class TranslatePostTest extends TestCase
@@ -28,22 +28,7 @@ class TranslatePostTest extends TestCase
         ], $overrides));
     }
 
-    private function translator(array $result): Translator
-    {
-        return new class($result) extends Translator
-        {
-            public function __construct(private readonly array $result)
-            {
-                parent::__construct();
-            }
-
-            public function translate(string $sourceHtml, string $postType, string $sourceLocale, array $targetLocales): array
-            {
-                return $this->result;
-            }
-        };
-    }
-
+    /** @return array<string, array{title: string, summary: string, body_html: string}> */
     private function sampleTranslations(): array
     {
         return [
@@ -57,49 +42,64 @@ class TranslatePostTest extends TestCase
     {
         $post = $this->makePost();
 
-        (new TranslatePost($post->id))->handle($this->translator($this->sampleTranslations()));
+        (new TranslatePost($post->id))->handle(new FakeTranslationDriver($this->sampleTranslations()));
 
         $post->refresh()->load('translations');
-
         $this->assertSame(PostStatus::Review, $post->status);
         $this->assertEqualsCanonicalizing(['uz', 'ru', 'en'], $post->translations->pluck('locale')->all());
         $this->assertSame('День открытых дверей', $post->translation('ru')->title);
         $this->assertSame('<p>Text</p>', $post->translation('en')->body);
     }
 
-    /** Moderator qo'lda tuzatgan matnni qayta tarjima bosib ketmasligi kerak. */
+    public function test_it_passes_the_source_html_and_configured_locales_to_the_driver(): void
+    {
+        config(['translation.target_locales' => ['ru', 'en']]);
+        $post = $this->makePost();
+        $driver = new FakeTranslationDriver($this->sampleTranslations());
+
+        (new TranslatePost($post->id))->handle($driver);
+
+        $this->assertSame('<p><strong>Ochiq eshiklar kuni</strong></p>', $driver->lastCall['sourceHtml']);
+        $this->assertSame('news', $driver->lastCall['postType']);
+        $this->assertSame('uz', $driver->lastCall['sourceLocale']);
+        $this->assertSame(['ru', 'en'], $driver->lastCall['targetLocales']);
+    }
+
     public function test_it_keeps_human_edited_translations(): void
     {
         $post = $this->makePost();
         $post->translations()->create([
             'locale' => 'ru',
-            'title' => 'Qo\'lda yozilgan sarlavha',
+            'title' => "Qo'lda yozilgan sarlavha",
             'summary' => '',
-            'body' => '<p>Qo\'lda yozilgan matn</p>',
+            'body' => "<p>Qo'lda yozilgan matn</p>",
             'edited_by_human' => true,
         ]);
 
-        (new TranslatePost($post->id))->handle($this->translator($this->sampleTranslations()));
+        (new TranslatePost($post->id))->handle(new FakeTranslationDriver($this->sampleTranslations()));
 
-        $this->assertSame("Qo'lda yozilgan sarlavha", $post->refresh()->translation('ru')->title);
+        $post->refresh()->load('translations');
+        $this->assertSame("Qo'lda yozilgan sarlavha", $post->translation('ru')->title);
         $this->assertSame('Open Day', $post->translation('en')->title);
     }
 
     public function test_it_does_not_touch_an_already_published_post(): void
     {
         $post = $this->makePost(['status' => PostStatus::Published]);
+        $driver = new FakeTranslationDriver($this->sampleTranslations());
 
-        (new TranslatePost($post->id))->handle($this->translator($this->sampleTranslations()));
+        (new TranslatePost($post->id))->handle($driver);
 
         $this->assertSame(PostStatus::Published, $post->refresh()->status);
         $this->assertCount(0, $post->translations);
+        $this->assertNull($driver->lastCall);
     }
 
     public function test_a_post_without_text_is_marked_failed(): void
     {
         $post = $this->makePost(['source_html' => '', 'source_text' => '']);
 
-        (new TranslatePost($post->id))->handle($this->translator([]));
+        (new TranslatePost($post->id))->handle(new FakeTranslationDriver);
 
         $post->refresh();
         $this->assertSame(PostStatus::Failed, $post->status);
@@ -110,10 +110,10 @@ class TranslatePostTest extends TestCase
     {
         $post = $this->makePost();
 
-        (new TranslatePost($post->id))->failed(new RuntimeException('Claude javob bermadi'));
+        (new TranslatePost($post->id))->failed(new RuntimeException('Servis javob bermadi'));
 
         $post->refresh();
         $this->assertSame(PostStatus::Failed, $post->status);
-        $this->assertSame('Claude javob bermadi', $post->last_error);
+        $this->assertSame('Servis javob bermadi', $post->last_error);
     }
 }

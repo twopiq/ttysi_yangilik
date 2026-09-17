@@ -54,7 +54,7 @@ Quyidagi beshta narsani tayyorlash kerak:
 | 1 | **Telegram bot tokeni** | [@BotFather](https://t.me/BotFather) → `/newbot` |
 | 2 | **Bot kanalga admin qilib qo'shilgan bo'lishi** | Kanal → Administrators → Add Admin. Busiz `channel_post` yangilanishlari **umuman kelmaydi** |
 | 3 | **Kanal chat id** | Botni qo'shgach `php artisan telegram:webhook info`, yoki [@userinfobot](https://t.me/userinfobot) |
-| 4 | **Anthropic API kaliti** | [console.anthropic.com](https://console.anthropic.com) → API Keys |
+| 4 | **Tarjima kaliti** (yoki umuman kalitsiz) | pastdagi «Tarjima dvigatelini tanlash» bo'limiga qarang |
 | 5 | **HTTPS domen** | Telegram webhookni faqat `https://` manziliga yuboradi (self-signed sertifikat ham bo'ladi, lekin Let's Encrypt osonroq) |
 
 Sayt tomonida esa bitta endpoint yozilishi kerak — kontrakti quyida.
@@ -88,10 +88,11 @@ php artisan queue:work                # navbat ishchisi — doimiy ishlab turish
 | `TELEGRAM_WEBHOOK_SECRET` | Tasodifiy satr: `php -r "echo bin2hex(random_bytes(24));"` |
 | `TELEGRAM_CHANNEL_ID` | `-100...` yoki `@kanal_nomi`. Bo'sh bo'lsa filtr o'chadi |
 | `TELEGRAM_MEDIA_GROUP_WAIT` | Albomning to'lishini necha soniya kutish (standart 20) |
-| `ANTHROPIC_API_KEY` | Claude API kaliti |
-| `ANTHROPIC_MODEL` | Standart `claude-opus-5` |
-| `ANTHROPIC_EFFORT` | `low`\|`medium`\|`high`\|`xhigh`\|`max` — standart `medium` |
+| `TRANSLATE_DRIVER` | `gemini` \| `openai_compatible` \| `claude` \| `manual` |
 | `TRANSLATE_TARGET_LOCALES` | Standart `ru,en` |
+| `GEMINI_API_KEY` / `GEMINI_MODEL` | `gemini` dvigateli uchun |
+| `TRANSLATE_OPENAI_BASE_URL` / `_API_KEY` / `_MODEL` | `openai_compatible` uchun |
+| `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` | `claude` uchun |
 | `SITE_API_ENDPOINT` | Saytdagi qabul qiluvchi manzil |
 | `SITE_API_TOKEN` | Sayt tekshiradigan Bearer token |
 | `SITE_SECTION_ANNOUNCEMENT` / `SITE_SECTION_NEWS` | Saytdagi bo'lim sluglari |
@@ -205,19 +206,42 @@ ko'rinadi, "Qayta tarjima" bilan qaytariladi).
 
 ---
 
-## Xarajat
+## Tarjima dvigatelini tanlash
 
-Bitta post uchun taxminan (Claude Opus 5, ~300 so'zli yangilik, 3 til):
+Tarjima qismi almashtiriladigan qilib yozilgan: `TRANSLATE_DRIVER` ni
+o'zgartirasiz, quvurning qolgan qismiga tegilmaydi.
 
-* kirish ~1 100 token → ~$0.006
-* chiqish ~1 800 token → ~$0.045
+| Dvigatel | Kalit kerakmi | Izoh |
+|---|---|---|
+| `gemini` | Google AI Studio kaliti (bepul darajasi bor) | **Standart tanlov.** O'zbek tilini yaxshi biladi, javob shakli `responseSchema` bilan kafolatlanadi |
+| `openai_compatible` | servisga qarab | Bitta dvigatel bilan OpenRouter (`:free` modellar), Groq, Together, Mistral va lokal Ollama ishlaydi — faqat `base_url` va `model` o'zgaradi |
+| `claude` | Anthropic kaliti (pullik) | Sifati eng yuqori |
+| `manual` | **hech narsa kerak emas** | Matn moderatsiya paneliga tushadi, tarjimani moderator o'zi yozadi. Rasm, tasdiqlash va saytga yuborish odatdagidek ishlaydi |
 
-Jami **~$0.05 / post**. Oyiga 50 ta post ≈ **$2.5**. Tizim prompti
-keshlanadi, shuning uchun kirish qismi amalda undan ham arzonroq tushadi.
-Arzonlashtirish kerak bo'lsa `ANTHROPIC_EFFORT=low` yoki
-`ANTHROPIC_MODEL=claude-sonnet-5` qilinadi.
+Institut kanali hajmi kichik — kuniga bir necha post, ya'ni sutkasiga 1-3 ta
+so'rov. Bu deyarli har qanday bepul darajaning limitidan ancha past.
 
----
+Limit tugasa (HTTP 429) vazifa xato bilan tugamaydi: navbat uni 30 s, 2 daq,
+10 daq oralig'ida qayta urinib ko'radi.
+
+### Nega oddiy tarjimon (Google Translate, Yandex Translate) ishlatilmagan
+
+Quvurga faqat tarjima emas, uchta narsa kerak: **sarlavha yasash**,
+**qisqacha mazmun yozish** va **Telegram uslubini sayt uslubiga keltirish**
+(emoji, "obuna bo'ling", "👇" kabilarni olib tashlash). Oddiy mashina
+tarjimasi matnni satrma-satr o'giradi, lekin sarlavha ham, qisqacha mazmun
+ham yasay olmaydi. Shuning uchun dvigatellar til modellari asosida.
+
+Agar baribir Yandex/Google Translate ishlatmoqchi bo'lsangiz, `manual`
+dvigatelini yoqing va moderator panelida tarjimani qo'lda joylashtiring.
+
+### Taxminiy xarajat
+
+`gemini` yoki `openai_compatible` bepul darajasida — **$0**.
+
+`claude` tanlansa, bitta post uchun taxminan (~300 so'zli yangilik, 3 til):
+kirish ~1 100 token → ~$0.006, chiqish ~1 800 token → ~$0.045. Jami
+**~$0.05 / post**, oyiga 50 ta post ≈ **$2.5**.
 
 ## Loyiha tuzilishi
 
@@ -226,12 +250,14 @@ Arzonlashtirish kerak bo'lsa `ANTHROPIC_EFFORT=low` yoki
 | `app/Http/Controllers/TelegramWebhookController.php` | webhook: secret tekshiruvi, takrorlanishni oldini olish |
 | `app/Services/Telegram/PostParser.php` | Telegram entity'larini HTMLga o'girish (UTF-16 offsetlar), hashtag aniqlash |
 | `app/Services/Telegram/TelegramClient.php` | Bot API chaqiriqlari, fayl yuklash |
-| `app/Services/Translation/Translator.php` | Claude chaqirig'i, structured output sxemasi, tarjima prompti |
+| `app/Contracts/TranslationDriver.php` | tarjima dvigateli shartnomasi |
+| `app/Services/Translation/TranslationPrompt.php` | umumiy prompt, JSON sxemasi, javobni o'qish |
+| `app/Services/Translation/*Translator.php` | Gemini, OpenAI-mos, Claude va qo'lda dvigatellari |
 | `app/Services/Site/SitePublisher.php` | saytga multipart so'rov |
 | `app/Jobs/*` | navbat vazifalari: ingest → download → translate → publish |
 | `app/Http/Controllers/ModerationController.php` | moderatsiya paneli |
 
-Testlar: `php artisan test` (36 ta test). Kod uslubi: `vendor/bin/pint`.
+Testlar: `php artisan test` (49 ta test). Kod uslubi: `vendor/bin/pint`.
 
 ---
 

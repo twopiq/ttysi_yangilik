@@ -101,7 +101,7 @@ class IngestTelegramUpdate implements ShouldQueue
                 'status' => PostStatus::Collecting,
                 'source_text' => $parsed->text,
                 'source_html' => $parsed->html,
-                'source_locale' => (string) config('anthropic.source_locale'),
+                'source_locale' => (string) config('translation.source_locale'),
                 'telegram_url' => $parsed->url,
                 'posted_at' => $parsed->postedAt,
             ]);

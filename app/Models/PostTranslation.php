@@ -21,6 +21,6 @@ class PostTranslation extends Model
 
     public function localeName(): string
     {
-        return (string) config("anthropic.locale_names.{$this->locale}", $this->locale);
+        return (string) config("translation.locale_names.{$this->locale}", $this->locale);
     }
 }

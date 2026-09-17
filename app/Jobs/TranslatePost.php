@@ -2,9 +2,9 @@
 
 namespace App\Jobs;
 
+use App\Contracts\TranslationDriver;
 use App\Enums\PostStatus;
 use App\Models\Post;
-use App\Services\Translation\Translator;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -38,7 +38,7 @@ class TranslatePost implements ShouldBeUnique, ShouldQueue
         return (int) config('telegram.media_group_wait_seconds') + 600;
     }
 
-    public function handle(Translator $translator): void
+    public function handle(TranslationDriver $translator): void
     {
         $post = Post::with('translations')->find($this->postId);
 
@@ -63,7 +63,7 @@ class TranslatePost implements ShouldBeUnique, ShouldQueue
             sourceHtml: $post->source_html,
             postType: $post->type->value,
             sourceLocale: $post->source_locale,
-            targetLocales: (array) config('anthropic.target_locales'),
+            targetLocales: (array) config('translation.target_locales'),
         );
 
         foreach ($translations as $locale => $translation) {

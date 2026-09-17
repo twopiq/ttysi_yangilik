@@ -37,6 +37,8 @@
         <env name="TELEGRAM_CHANNEL_ID" value="-1001234567890"/>
         <env name="TELEGRAM_MEDIA_GROUP_WAIT" value="20"/>
         <env name="ANTHROPIC_API_KEY" value="test-anthropic-key"/>
+        <env name="TRANSLATE_DRIVER" value="gemini"/>
+        <env name="GEMINI_API_KEY" value="test-gemini-key"/>
         <env name="SITE_API_ENDPOINT" value="https://institut.test/api/news"/>
         <env name="SITE_API_TOKEN" value="test-site-token"/>
     </php>
