@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Contracts\SitePublisher;
 use App\Contracts\TranslationDriver;
 use App\Services\Site\ApiSitePublisher;
+use App\Services\Site\DatabaseSitePublisher;
 use App\Services\Translation\ClaudeTranslator;
 use App\Services\Translation\GeminiTranslator;
 use App\Services\Translation\ManualTranslator;
@@ -33,6 +34,7 @@ class AppServiceProvider extends ServiceProvider
      */
     private const SITE_PUBLISHERS = [
         'api' => ApiSitePublisher::class,
+        'database' => DatabaseSitePublisher::class,
     ];
 
     /**

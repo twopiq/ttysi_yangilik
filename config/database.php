@@ -99,6 +99,25 @@ return [
             'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
 
+        /*
+        | Institut saytining bazasi. Bu servis unga faqat yangilik joylash
+        | uchun ulanadi — o'z migratsiyalarini bu yerda ishlatmaydi.
+        */
+        'site' => [
+            'driver' => env('SITE_DB_DRIVER', 'pgsql'),
+            'url' => env('SITE_DB_URL'),
+            'host' => env('SITE_DB_HOST', '127.0.0.1'),
+            'port' => env('SITE_DB_PORT', '5432'),
+            'database' => env('SITE_DB_DATABASE'),
+            'username' => env('SITE_DB_USERNAME'),
+            'password' => env('SITE_DB_PASSWORD', ''),
+            'charset' => env('SITE_DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => env('SITE_DB_SCHEMA', 'public'),
+            'sslmode' => env('SITE_DB_SSLMODE', 'prefer'),
+        ],
+
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_URL'),

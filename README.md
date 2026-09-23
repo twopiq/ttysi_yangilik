@@ -120,7 +120,65 @@ yig'adi va izohni o'shandan oladi.
 
 ---
 
-## Sayt tomonidagi endpoint (kontrakt)
+## Saytga yetkazishning ikki usuli
+
+`SITE_DRIVER` ikki qiymatni oladi.
+
+### `database` — sayt bazasiga to'g'ridan-to'g'ri yozish
+
+Sayt bilan bir tarmoq ichida bo'lsangiz va saytga kod qo'shadigan odam
+bo'lmasa, shu usul ishlatiladi. Sayt tomonida **hech narsa yozilmaydi**.
+
+Sxemani hech kimdan so'rash shart emas — baza o'zi aytadi:
+
+```bash
+php artisan site:inspect            # jadvallar, ustunlar, tashqi kalitlar
+php artisan site:inspect news --sample   # bitta jadval + namuna qator
+php artisan site:inspect --all      # barcha jadvallar ro'yxati
+```
+
+Buyruq yangilikka o'xshagan jadvallarni o'zi topadi va ko'p tillilik qaysi
+ko'rinishda saqlanganini aniqlaydi. Topilganini `config/site.php` ichidagi
+`database` bo'limiga ko'chirasiz, so'ng:
+
+```bash
+php artisan site:verify   # moslikni sxemaga solishtiradi, hech narsa yozmaydi
+```
+
+`site:verify` yo'q ustunni, yo'q jadvalni va **biz yozmaydigan majburiy
+ustunni** oldindan aytadi — xato nashr paytida emas, sozlash paytida
+chiqadi.
+
+Uch xil ko'p tillilik qo'llab-quvvatlanadi (`SITE_DB_LAYOUT`):
+
+| Qiymat | Sxema |
+|---|---|
+| `translations` | `news` + `news_translations(news_id, locale, title, body)` |
+| `json` | `news.title` JSON: `{"uz": "...", "ru": "..."}` |
+| `columns` | `news.title_uz`, `news.title_ru`, ... |
+
+**Takroriy nashr yangi yozuv yaratmaydi.** Birinchi nashrda olingan id
+bizning `posts.remote_id` da saqlanadi, keyingisida o'sha qator yangilanadi
+— saytda maxsus `external_id` ustuni talab qilinmaydi.
+
+**Rasmlar.** Baza porti fayllarni tashimaydi, shuning uchun
+`SITE_STORAGE_PATH` saytning `storage/app/public` papkasini ko'rsatishi
+kerak (bir xil server yoki NFS/SMB mount). Fayl o'sha yerga ko'chiriladi,
+bazaga esa nisbiy yo'l yoziladi. `SITE_STORAGE_PATH` bo'sh bo'lsa matn
+baribir chop etiladi, faqat rasmsiz.
+
+**Nimadan ehtiyot bo'lish kerak.** Bu usul saytning Eloquent modelini
+chetlab o'tadi: model eventlari, kesh tozalash va qidiruv indeksi
+ishlamaydi. Sayt migratsiya qilib ustun nomini o'zgartirsa, `site:verify`
+buni ko'rsatadi, lekin avtomatik tuzatmaydi — sayt yangilangach shu
+buyruqni qayta ishlating.
+
+### `api` — saytning HTTP endpointiga yuborish
+
+Saytga kod qo'sha oladigan odam bo'lsa, shu usul tozaroq: saytning o'z
+validatsiyasi, slug yasashi va keshi joyida qoladi. Kontrakti quyida.
+
+#### `api` usulining kontrakti
 
 Servis tasdiqlangan postni bitta `POST` bilan yuboradi:
 
@@ -253,18 +311,24 @@ kirish ~1 100 token → ~$0.006, chiqish ~1 800 token → ~$0.045. Jami
 | `app/Contracts/TranslationDriver.php` | tarjima dvigateli shartnomasi |
 | `app/Services/Translation/TranslationPrompt.php` | umumiy prompt, JSON sxemasi, javobni o'qish |
 | `app/Services/Translation/*Translator.php` | Gemini, OpenAI-mos, Claude va qo'lda dvigatellari |
-| `app/Services/Site/SitePublisher.php` | saytga multipart so'rov |
+| `app/Contracts/SitePublisher.php` | saytga yetkazish shartnomasi |
+| `app/Services/Site/ApiSitePublisher.php` | saytga multipart HTTP so'rov |
+| `app/Services/Site/DatabaseSitePublisher.php` | sayt bazasiga to'g'ridan-to'g'ri yozish |
+| `app/Console/Commands/InspectSiteDatabase.php` | sayt sxemasini o'qish (`site:inspect`) |
+| `app/Console/Commands/VerifySiteMapping.php` | moslikni tekshirish (`site:verify`) |
 | `app/Jobs/*` | navbat vazifalari: ingest → download → translate → publish |
 | `app/Http/Controllers/ModerationController.php` | moderatsiya paneli |
 
-Testlar: `php artisan test` (49 ta test). Kod uslubi: `vendor/bin/pint`.
+Testlar: `php artisan test` (63 ta test). Kod uslubi: `vendor/bin/pint`.
 
 ---
 
 ## Hali qilinmagan / keyingi qadamlar
 
-* Sayt tomonidagi qabul qiluvchi endpoint — yuqoridagi kontrakt bo'yicha
-  institut saytida yozilishi kerak.
+* `api` usulini tanlasangiz, qabul qiluvchi endpoint institut saytida
+  yozilishi kerak. `database` usulida sayt tomonida hech narsa kerak emas,
+  lekin `config/site.php` dagi moslik `site:inspect` natijasiga qarab
+  to'ldiriladi.
 * Kanaldagi post **tahrirlansa** (`edited_channel_post`) hozir yangi tarjima
   ketmaydi — allaqachon chop etilgan postni yangilash mantiqi qo'shilmagan.
 * Postni kanaldan o'chirish saytdagi nusxani o'chirmaydi.
