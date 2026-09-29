@@ -8,6 +8,10 @@ return [
     | database — sayt bazasiga to'g'ridan-to'g'ri yozish. Sxemani
     |            `php artisan site:inspect` bilan aniqlab, quyidagi
     |            `database` bo'limidagi moslikni to'ldiring.
+    | admin    — saytning admin paneliga kirib, "yangilik qo'shish" formasini
+    |            to'ldirish. Saytda API bo'lmasa va kodiga tegish imkoni
+    |            bo'lmasa shu ishlatiladi. Maydon nomlarini
+    |            `php artisan site:form` panelning o'zidan o'qib beradi.
     */
     'driver' => env('SITE_DRIVER', 'api'),
 
@@ -141,5 +145,80 @@ return [
         | Moderatsiya panelida "Saytda" havolasi uchun. {slug} va {id} ishlaydi.
         */
         'url_template' => env('SITE_URL_TEMPLATE'),
+    ],
+
+    /*
+    |-------------------------------------------------------------------------
+    | `admin` usuli: saytning admin paneli orqali joylash
+    |-------------------------------------------------------------------------
+    |
+    | Saytda API yo'q va uning kodiga tegilmaydi — shuning uchun panelga
+    | kirib, forma to'ldiriladi. Maydon nomlarini bilish uchun:
+    |
+    |     php artisan site:form
+    |
+    */
+    'admin' => [
+        'base_url' => env('SITE_ADMIN_URL'),
+
+        'login_path' => env('SITE_ADMIN_LOGIN_PATH', '/login'),
+        'create_path' => env('SITE_ADMIN_CREATE_PATH', '/news/create'),
+
+        'username' => env('SITE_ADMIN_USERNAME'),
+        'password' => env('SITE_ADMIN_PASSWORD'),
+
+        /*
+        | Kirish formasidagi maydon nomlari. Ba'zi panellarda `login`,
+        | `username` yoki `phone` bo'ladi — `site:form --login` ko'rsatadi.
+        */
+        'login_fields' => [
+            'username' => env('SITE_ADMIN_USERNAME_FIELD', 'email'),
+            'password' => env('SITE_ADMIN_PASSWORD_FIELD', 'password'),
+        ],
+
+        /*
+        | Sahifada bir nechta forma bo'lsa, action'i shu matnni o'z ichiga
+        | olgani tanlanadi. Bo'sh bo'lsa: fayl maydoni bori, so'ng maydoni
+        | eng ko'pi olinadi.
+        */
+        'action_hint' => env('SITE_ADMIN_ACTION_HINT'),
+
+        /*
+        | Forma maydonlariga moslik. `{locale}` bo'lsa har bir til uchun
+        | alohida maydon to'ldiriladi (masalan `title[uz]`, `title_ru`).
+        | `{locale}` bo'lmasa panel bir tilli — faqat manba tili yuboriladi.
+        */
+        'fields' => [
+            'title' => env('SITE_ADMIN_TITLE_FIELD', 'title[{locale}]'),
+            'summary' => env('SITE_ADMIN_SUMMARY_FIELD'),
+            'body' => env('SITE_ADMIN_BODY_FIELD', 'body[{locale}]'),
+        ],
+
+        /*
+        | Rasm maydonlari. `image_field` — muqova, `gallery_field` — qolgan
+        | rasmlar (masalan `images[]`). Ikkisi ham bo'sh bo'lsa rasm
+        | yuborilmaydi.
+        */
+        'image_field' => env('SITE_ADMIN_IMAGE_FIELD', 'image'),
+        'gallery_field' => env('SITE_ADMIN_GALLERY_FIELD'),
+
+        /*
+        | Formaning boshqa majburiy maydonlari: rubrika, holat va hokazo.
+        | Post turiga qarab ajratiladi.
+        */
+        'extra' => [
+            'common' => [],
+            'announcement' => [],
+            'news' => [],
+        ],
+
+        'timeout' => (int) env('SITE_ADMIN_TIMEOUT', 60),
+        'user_agent' => env('SITE_ADMIN_USER_AGENT', 'InstitutYangiliklar/1.0'),
+
+        /*
+        | Moderatsiya panelidagi havola. Bo'sh bo'lsa yuborilgandan keyin
+        | panel yo'naltirgan manzil ishlatiladi.
+        */
+        'url_template' => env('SITE_ADMIN_URL_TEMPLATE'),
     ],
 ];

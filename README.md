@@ -120,9 +120,16 @@ yig'adi va izohni o'shandan oladi.
 
 ---
 
-## Saytga yetkazishning ikki usuli
+## Saytga yetkazishning uchta usuli
 
-`SITE_DRIVER` ikki qiymatni oladi.
+`SITE_DRIVER` uch qiymatni oladi. Tanlash mezoni oddiy: saytga kod
+qo'shish imkoni bormi, baza ochiqmi, yoki faqat admin paneliga login bormi.
+
+| `SITE_DRIVER` | Nima kerak | Qachon |
+|---|---|---|
+| `api` | saytga kod qo'shish | Eng toza: saytning validatsiyasi, slug va keshi joyida qoladi |
+| `database` | baza login/paroli + storage papkasiga yo'l | Kod qo'shadigan odam bo'lmasa, baza esa ochiq bo'lsa |
+| `admin` | faqat admin panel login/paroli | Saytda API yo'q, kodiga tegilmaydi, bazaga ham yo'l yo'q |
 
 ### `database` — sayt bazasiga to'g'ridan-to'g'ri yozish
 
@@ -172,6 +179,64 @@ chetlab o'tadi: model eventlari, kesh tozalash va qidiruv indeksi
 ishlamaydi. Sayt migratsiya qilib ustun nomini o'zgartirsa, `site:verify`
 buni ko'rsatadi, lekin avtomatik tuzatmaydi — sayt yangilangach shu
 buyruqni qayta ishlating.
+
+### `admin` — admin panel orqali joylash
+
+Saytda API yo'q, kodiga tegish imkoni yo'q, bazaga ham yo'l yo'q — qoladigan
+narsa admin panel login/paroli. Bu usul odam qiladigan ishni bajaradi:
+panelga kiradi, "yangilik qo'shish" formasini to'ldiradi, yuboradi.
+
+Maydon nomlarini bilish uchun ikki buyruq bor. Ikkisi ham **hech narsa
+yubormaydi**:
+
+```bash
+php artisan site:form --login    # kirish formasidagi maydon nomlari
+php artisan site:form            # panelga kirib, yangilik formasini o'qiydi
+```
+
+`site:form` maydonlarni jadval qilib chiqaradi va taxminiy moslikni tayyorlab
+beradi, masalan:
+
+```
+ 'title' => 'title[{locale}]',
+ 'summary' => 'anons[{locale}]',
+ 'body' => 'content[{locale}]',
+ 'image_field' => 'rasm',
+
+ WARN Bu maydonlar majburiy, lekin mosliqqa tushmadi: category_id
+```
+
+Shu blokni `config/site.php` -> `admin` ga ko'chirasiz, ogohlantirishdagi
+majburiy maydonlarga esa `admin.extra` da doimiy qiymat berasiz (rubrika id,
+muallif va shu kabilar).
+
+Maydon nomida til kodi bo'lsa (`title[uz]`, `name_ru`) buyruq uni
+`{locale}` shabloniga aylantiradi — shunda barcha tillar bitta yozuvda
+to'ldiriladi. Shablonda `{locale}` bo'lmasa panel bir tilli deb qabul
+qilinadi va faqat manba tili yuboriladi.
+
+**Tarmoq yopiq bo'lsa yoki panel JavaScript bilan yasalgan bo'lsa:**
+sahifani brauzerda saqlab (Ctrl+S), faylni shu buyruqqa berasiz — login ham,
+tarmoq ham kerak emas:
+
+```bash
+php artisan site:form --file=storage/app/panel.html
+```
+
+Nima avtomatik hal qilinadi:
+
+* Laravel `_token` (CSRF) formaning o'zidan olinadi, sessiya cookie saqlanadi
+* formadagi yashirin maydonlar (`author_id` va hokazo) o'zgarmagan qaytariladi
+* muqova `image_field` ga, qolgan rasmlar `gallery_field` ga biriktiriladi
+* sayt validatsiya xatosi bersa, sababi moderatsiya panelida ko'rinadi
+  (`Sayt aytgan xatolar: category_id tanlanmagan`)
+
+**Bu uchtasining eng mo'rti.** Panel HTML'i o'zgarsa ishlamay qoladi —
+shuning uchun maydon nomlari kodda emas, sozlamada turadi va `site:form`
+ularni qaytadan o'qib beradi. Livewire, Inertia, Filament yoki Nova
+panellari formani JavaScript orqali yuboradi; `site:form` buni aniqlab
+ogohlantiradi, chunki u yerda oddiy POST ishlamasligi mumkin. Panelda ikki
+faktorli tasdiq yoki captcha bo'lsa ham bu usul ishlamaydi.
 
 ### `api` — saytning HTTP endpointiga yuborish
 
@@ -314,12 +379,16 @@ kirish ~1 100 token → ~$0.006, chiqish ~1 800 token → ~$0.045. Jami
 | `app/Contracts/SitePublisher.php` | saytga yetkazish shartnomasi |
 | `app/Services/Site/ApiSitePublisher.php` | saytga multipart HTTP so'rov |
 | `app/Services/Site/DatabaseSitePublisher.php` | sayt bazasiga to'g'ridan-to'g'ri yozish |
+| `app/Services/Site/AdminSitePublisher.php` | admin panel formasini to'ldirish |
+| `app/Services/Site/AdminPanel/FormParser.php` | HTML formani ajratish (`dom` kengaytmasi) |
+| `app/Services/Site/AdminPanel/AdminPanelClient.php` | panelga kirish, sessiya, forma yuborish |
+| `app/Console/Commands/InspectSiteForm.php` | forma maydonlarini o'qish (`site:form`) |
 | `app/Console/Commands/InspectSiteDatabase.php` | sayt sxemasini o'qish (`site:inspect`) |
 | `app/Console/Commands/VerifySiteMapping.php` | moslikni tekshirish (`site:verify`) |
 | `app/Jobs/*` | navbat vazifalari: ingest → download → translate → publish |
 | `app/Http/Controllers/ModerationController.php` | moderatsiya paneli |
 
-Testlar: `php artisan test` (63 ta test). Kod uslubi: `vendor/bin/pint`.
+Testlar: `php artisan test` (82 ta test). Kod uslubi: `vendor/bin/pint`.
 
 ---
 
